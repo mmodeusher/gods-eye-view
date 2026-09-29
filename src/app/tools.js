@@ -2,6 +2,8 @@ import { SceneDirector } from '../scenes/director.js';
 import { initAnnotations } from '../annotations/index.js';
 import { initDrawTool } from '../annotations/drawTool.js';
 import { initGevVoiceCommands } from '../voice/gevRealtime.js';
+import { CaseManagementPanel } from '../ui/caseManagementPanel.js';
+import { AnnotationMetadataPanel } from '../ui/annotationMetadataPanel.js';
 import { installScopeMask, destroyScopeMask } from '../scopeMask.js';
 import {
   installRenderGovernor,
@@ -106,6 +108,30 @@ export function createApplicationTools({
   const caseManager = new CaseManager();
   const annotationPersistence = new AnnotationPersistence(caseManager);
 
+  const caseManagementPanel = new CaseManagementPanel({
+    caseManager,
+    onCaseSelected: (c) => {
+      console.log('Case selected:', c);
+    },
+  });
+  const leftStack = document.getElementById('left-panel-stack');
+  if (leftStack) {
+    caseManagementPanel.mount(leftStack);
+  }
+  defer(() => caseManagementPanel.destroy());
+
+  const annotationMetadataPanel = new AnnotationMetadataPanel({
+    annotations,
+    annotationPersistence,
+    caseManager,
+    onMetadataChanged: () => {},
+  });
+  const rightRail = document.getElementById('right-context-rail');
+  if (rightRail) {
+    annotationMetadataPanel.mount(rightRail);
+  }
+  defer(() => annotationMetadataPanel.destroy());
+
   window.__godsEyeView = {
     viewer,
     styleManager,
@@ -121,6 +147,7 @@ export function createApplicationTools({
     requestRender: governorRequestRender,
     caseManager,
     annotationPersistence,
+    annotationMetadataPanel,
   };
   const debug = window.__godsEyeView;
   defer(() => {

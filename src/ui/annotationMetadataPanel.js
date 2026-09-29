@@ -132,7 +132,7 @@ export class AnnotationMetadataPanel {
     valInput.style.width = '50%';
     valInput.style.padding = '4px';
     valInput.style.backgroundColor = '#10242e';
-    valInput.style.color '#e3faff';
+    valInput.style.color = '#e3faff';
     valInput.style.border = '1px solid #397080';
     valInput.style.boxSizing = 'border-box';
 
