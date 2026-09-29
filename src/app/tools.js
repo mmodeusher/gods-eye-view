@@ -10,6 +10,8 @@ import {
   holdContinuousRender,
   releaseContinuousRender,
 } from '../renderGovernor.js';
+import { CaseManager } from '../investigation/caseManager.js';
+import { AnnotationPersistence } from '../investigation/annotationPersistence.js';
 
 /** Attach scene tools, rendering listeners and the application debug handle. */
 export function createApplicationTools({
@@ -100,6 +102,10 @@ export function createApplicationTools({
   // loop burning behind a hidden tab. (perf wave 2 fix)
   syncVisibilitySuspension();
 
+  // OSINT Investigation Layer
+  const caseManager = new CaseManager();
+  const annotationPersistence = new AnnotationPersistence(caseManager);
+
   window.__godsEyeView = {
     viewer,
     styleManager,
@@ -113,6 +119,8 @@ export function createApplicationTools({
     getRenderGovernorDiagnostics,
     surfaceServices: operations.surface,
     requestRender: governorRequestRender,
+    caseManager,
+    annotationPersistence,
   };
   const debug = window.__godsEyeView;
   defer(() => {
@@ -137,5 +145,5 @@ export function createApplicationTools({
       delete window.__gevVoiceCommands;
   });
   debug.voiceCommands = voiceCommands;
-  return { sceneDirector, annotations, voiceCommands };
+  return { sceneDirector, annotations, voiceCommands, caseManager, annotationPersistence };
 }
