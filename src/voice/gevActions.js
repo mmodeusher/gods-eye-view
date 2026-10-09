@@ -74,6 +74,8 @@ const PANEL_ALIASES = new Map([
   ['basemap', 'control-panel'],
   ['map sources', 'control-panel'],
   ['sources', 'control-panel'],
+  ['cases', 'case-management-panel'],
+  ['investigation', 'case-management-panel'],
 ]);
 
 const PANEL_IDS = new Set([
@@ -85,6 +87,7 @@ const PANEL_IDS = new Set([
   'global-context-panel',
   'scene-panel',
   'pp-toggles',
+  'case-management-panel',
 ]);
 const CONTEXT_MODE_ALIASES = new Map([
   ['off', 'off'],

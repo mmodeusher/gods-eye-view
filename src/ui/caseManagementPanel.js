@@ -10,13 +10,12 @@ export class CaseManagementPanel {
    * @param {import('../../investigation/caseManager.js').CaseManager} options.caseManager
    * @param {function} options.onCaseSelected
    */
-  constructor({ caseManager, onCaseSelected }) {
+  constructor({ caseManager, onCaseSelected, panelChrome }) {
     this.caseManager = caseManager;
     this.onCaseSelected = onCaseSelected;
-    this._lifetime = new UiLifetime();
-    this._container = null;
+    this._panelChrome = panelChrome || null;
     this._listContainer = null;
-    this._unsubscribe = null;
+    this._lifetime = new UiLifetime();
 
     this._createElements();
   }
@@ -24,23 +23,33 @@ export class CaseManagementPanel {
   _createElements() {
     this._panel = document.createElement('div');
     this._panel.id = 'case-management-panel';
-    this._panel.className = 'panel collapsed';
-    this._panel.dataset.panelId = 'case-management-panel';
+    this._panel.className = 'panel-collapsible collapsed';
+    this._panel.setAttribute('data-panel-id', 'case-management-panel');
 
-    const header = document.createElement('header');
+    // Glow layer for proper z-index and visual consistency (matches working panels)
+    const glow = document.createElement('div');
+    glow.className = 'panel-glow';
+
+    // Inner container holds header + content together (matching CCTV/Scene pattern)
+    const inner = document.createElement('div');
+    inner.className = 'case-management-panel-inner';
+
+    // Header inside inner container — must be inside for proper scrolling behavior
+    const header = document.createElement('div');
     header.className = 'panel-header';
     const title = document.createElement('span');
     title.className = 'panel-title';
-    title.textContent = 'Investigation Cases';
+    title.textContent = 'CASES';
+    const divider = document.createElement('span');
+    divider.className = 'panel-divider';
     const collapseBtn = document.createElement('button');
     collapseBtn.className = 'panel-collapse-btn';
     collapseBtn.dataset.collapseTarget = 'case-management-panel';
     collapseBtn.textContent = '+';
     collapseBtn.setAttribute('aria-expanded', 'false');
-    collapseBtn.setAttribute('aria-label', 'Expand Investigation Cases');
+    collapseBtn.setAttribute('aria-label', 'Collapse Investigation Cases');
 
-    header.append(title, collapseBtn);
-    this._panel.appendChild(header);
+    header.append(title, divider, collapseBtn);
 
     const content = document.createElement('div');
     content.className = 'panel-content';
@@ -76,90 +85,59 @@ export class CaseManagementPanel {
 
     actions.appendChild(createBtn);
     content.append(listContainer, actions);
-    this._panel.appendChild(content);
+    inner.appendChild(header);
+    inner.appendChild(content);
+    this._panel.appendChild(glow);
+    this._panel.appendChild(inner);
 
     this._listContainer = listContainer;
     this._collapseBtn = collapseBtn;
   }
 
   mount(container) {
-    this._container = container;
-    this._container.appendChild(this._panel);
-
-    this._unsubscribe = this.caseManager.subscribe((state) => {
-      this._render(state.cases, state.activeCaseId);
-    });
-  }
+     container.appendChild(this._panel);
+     
+     // DIAGNOSTIC: Verify data-panel-id attribute exists for PanelChrome binding
+     console.log('[CaseManagementPanel] Mounted panel:', {
+       id: this._panel.id,
+       hasDataPanelIdAttr: this._panel.hasAttribute('data-panel-id'),
+       datasetPanelId: this._panel.dataset.panelId,
+       collapseBtnTarget: this._collapseBtn?.dataset.collapseTarget,
+       buttonsFound: document.querySelectorAll('.panel-collapse-btn[data-collapse-target="case-management-panel"]').length,
+       chromeAvailable: Boolean(this._panelChrome),
+       panelClassName: this._panel.className,
+       innerClassExists: Boolean(this._panel.querySelector('.case-management-panel-inner')),
+     });
+ 
+     // Tell PanelChrome to discover the new collapse button so disclosure works.
+     this._panelChrome?.refresh();
+ 
+     this._unsubscribe = this.caseManager.subscribe((state) => {
+       this._render(state.cases, state.activeCaseId);
+     });
+   }
 
   _render(cases, activeCaseId) {
     this._listContainer.innerHTML = '';
-
-    if (cases.length === 0) {
-      const empty = document.createElement('div');
-      empty.textContent = 'No cases created.';
-      empty.style.color = '#668899';
-      empty.style.textAlign = 'center';
-      empty.style.fontSize = '12px';
-      this._listContainer.appendChild(empty);
-      return;
-    }
-
     for (const c of cases) {
       const item = document.createElement('div');
-      item.className = `case-item ${c.id === activeCaseId ? 'active' : ''}`;
-      item.style.display = 'flex';
-      item.style.justifyContent = 'space-between';
-      item.style.alignItems = 'center';
-      item.style.padding = '8px';
-      item.style.borderRadius = '4px';
+      item.className = 'case-item';
+      if (c.id === activeCaseId) item.classList.add('active');
+      item.textContent = c.name;
       item.style.cursor = 'pointer';
-      item.style.backgroundColor = c.id === activeCaseId ? '#1a3a4a' : 'transparent';
-      item.style.border = c.id === activeCaseId ? '1px solid #397080' : '1px solid transparent';
-
-      const info = document.createElement('div');
-      info.style.flex = '1';
-      info.style.overflow = 'hidden';
-      const name = document.createElement('div');
-      name.textContent = c.name;
-      name.style.fontWeight = '500';
-      name.style.whiteSpace = 'nowrap';
-      name.style.overflow = 'hidden';
-      name.style.textOverflow = 'ellipsis';
-      info.appendChild(name);
-
-      const date = document.createElement('div');
-      date.textContent = new Date(c.createdAt).toLocaleDateString();
-      date.style.fontSize = '10px';
-      date.style.color = '#668899';
-      info.appendChild(date);
-
-      item.appendChild(info);
-
-      const deleteBtn = document.createElement('button');
-      deleteBtn.textContent = '×';
-      deleteBtn.className = 'case-delete-btn';
-      deleteBtn.style.background = 'transparent';
-      deleteBtn.style.border = 'none';
-      deleteBtn.style.color = '#ff4444';
-      deleteBtn.style.fontSize = '18px';
-      deleteBtn.style.cursor = 'pointer';
-      deleteBtn.style.padding = '0 4px';
-      deleteBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (confirm(`Delete case "${c.name}"?`)) {
-          this.caseManager.deleteCase(c.id);
-        }
-      });
-
-      item.appendChild(deleteBtn);
-
-      item.addEventListener('click', () => {
-        this.caseManager.setActiveCase(c.id);
-        this.onCaseSelected(c);
-      });
-
+      item.style.padding = '4px 8px';
+      item.style.borderRadius = '4px';
+      if (c.id === activeCaseId) {
+        item.style.backgroundColor = '#397080';
+      }
+      item.addEventListener('click', () => this.onCaseSelected(c));
       this._listContainer.appendChild(item);
     }
+  }
+
+  _refreshTogglePanel() {
+    this._collapseBtn.textContent = this._panel.classList.contains('collapsed') ? '+' : '−';
+    this._collapseBtn.setAttribute('aria-expanded', String(!this._panel.classList.contains('collapsed')));
   }
 
   destroy() {

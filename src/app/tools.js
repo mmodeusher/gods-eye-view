@@ -2,7 +2,7 @@ import { SceneDirector } from '../scenes/director.js';
 import { initAnnotations } from '../annotations/index.js';
 import { initDrawTool } from '../annotations/drawTool.js';
 import { initGevVoiceCommands } from '../voice/gevRealtime.js';
-import { CaseManagementPanel } from '../ui/caseManagementPanel.js';
+import { CaseManagementPresentation } from '../ui/caseManagementPresentation.js';
 import { AnnotationMetadataPanel } from '../ui/annotationMetadataPanel.js';
 import { installScopeMask, destroyScopeMask } from '../scopeMask.js';
 import {
@@ -104,73 +104,80 @@ export function createApplicationTools({
   // loop burning behind a hidden tab. (perf wave 2 fix)
   syncVisibilitySuspension();
 
-  // OSINT Investigation Layer
-  const caseManager = new CaseManager();
-  const annotationPersistence = new AnnotationPersistence(caseManager);
+    // OSINT Investigation Layer
+    const caseManager = new CaseManager();
+    const annotationPersistence = new AnnotationPersistence(caseManager);
 
-  const caseManagementPanel = new CaseManagementPanel({
-    caseManager,
-    onCaseSelected: (c) => {
-      console.log('Case selected:', c);
-    },
-  });
-  const leftStack = document.getElementById('left-panel-stack');
-  if (leftStack) {
-    caseManagementPanel.mount(leftStack);
-  }
-  defer(() => caseManagementPanel.destroy());
+    const caseManagementPresentation = new CaseManagementPresentation(caseManager, {
+      onCaseSelected: (c) => {
+        console.log('Case selected:', c);
+      },
+      panelChrome: styleManager.panelChrome,
+    });
+    defer(() => caseManagementPresentation.destroy());
 
-  const annotationMetadataPanel = new AnnotationMetadataPanel({
-    annotations,
-    annotationPersistence,
-    caseManager,
-    onMetadataChanged: () => {},
-  });
-  const rightRail = document.getElementById('right-context-rail');
-  if (rightRail) {
-    annotationMetadataPanel.mount(rightRail);
-  }
-  defer(() => annotationMetadataPanel.destroy());
+    const leftStack = document.getElementById('left-panel-stack');
+    if (leftStack) {
+      // Note: If ScenePanel is present in left-panel-stack, 
+      // CaseManagementPresentation will be mounted after it.
+      caseManagementPresentation.mount(leftStack);
+    }
 
-  window.__godsEyeView = {
-    viewer,
-    styleManager,
-    tileset,
-    dataManager,
-    sceneDirector,
-    mapStackController,
-    annotations,
-    weatherEffects,
-    cockpitCloudEffects,
-    getRenderGovernorDiagnostics,
-    surfaceServices: operations.surface,
-    requestRender: governorRequestRender,
-    caseManager,
-    annotationPersistence,
-    annotationMetadataPanel,
-  };
-  const debug = window.__godsEyeView;
-  defer(() => {
-    if (window.__godsEyeView === debug) delete window.__godsEyeView;
-  });
-  const voiceCommands = initGevVoiceCommands({
-    ...voice,
-    floorServices: operations.surface.groundFloor,
-    annotationResolver: operations.annotationResolver,
-    searchNavigation: operations.searchAndFlyTo,
-    signal,
-    placeSearch,
-    viewer,
-    styleManager,
-    dataManager,
-    sceneDirector,
-    annotations,
-  });
-  defer(() => {
-    voiceCommands.stop({ removeUi: true });
-    if (window.__gevVoiceCommands === voiceCommands)
-      delete window.__gevVoiceCommands;
-  });
-  debug.voiceCommands = voiceCommands;
-  return { sceneDirector, annotations, voiceCommands, caseManager, annotationPersistence };
+    // Create AnnotationMetadataPanel with proper options object
+    const annotationMetadataPanel = new AnnotationMetadataPanel({
+      annotationEngine: annotations,
+      annotationPersistence: annotationPersistence,
+      caseManager: caseManager,
+      onMetadataChanged: (annotationId, extension) => {
+        console.log('Metadata changed for annotation:', annotationId, extension);
+      },
+      panelChrome: styleManager.panelChrome,
+    });
+    const rightRail = document.getElementById('right-context-rail');
+    if (rightRail) {
+      annotationMetadataPanel.mount(rightRail);
+    }
+    defer(() => annotationMetadataPanel.destroy());
+
+    window.__godsEyeView = {
+      viewer,
+      styleManager,
+      tileset,
+      dataManager,
+      sceneDirector,
+      mapStackController,
+      annotations,
+      weatherEffects,
+      cockpitCloudEffects,
+      getRenderGovernorDiagnostics,
+      surfaceServices: operations.surface,
+      requestRender: governorRequestRender,
+      caseManager,
+      annotationPersistence,
+      annotationMetadataPanel,
+    };
+    const debug = window.__godsEyeView;
+    defer(() => {
+      if (window.__godsEyeView === debug) delete window.__godsEyeView;
+    });
+    const voiceCommands = initGevVoiceCommands({
+      ...voice,
+      floorServices: operations.surface.groundFloor,
+      annotationResolver: operations.annotationResolver,
+      searchNavigation: operations.searchAndFlyTo,
+      signal,
+      placeSearch,
+      viewer,
+      styleManager,
+      dataManager,
+      sceneDirector,
+      annotations,
+    });
+    defer(() => {
+      voiceCommands.stop({ removeUi: true });
+      if (window.__gevVoiceCommands === voiceCommands)
+        delete window.__gevVoiceCommands;
+    });
+    debug.voiceCommands = voiceCommands;
+    return { sceneDirector, annotations, voiceCommands, caseManager, annotationPersistence };
 }

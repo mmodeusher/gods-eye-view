@@ -16,6 +16,8 @@ const SHARE_PANEL_STATE_SPECS = Object.freeze([
   { id: 'global-context-panel' },
   { id: 'pp-toggles' },
   { id: 'param-slider-panel' },
+  { id: 'case-management-panel' },
+  { id: 'annotation-metadata-panel' },
 ]);
 /** Standard map-view panels cleared out of the way on a fresh Cockpit entry. */
 const COCKPIT_ENTRY_COLLAPSE_PANEL_IDS = Object.freeze([
@@ -93,6 +95,14 @@ export class PanelChrome {
     for (const control of this._panelDisclosureControls || [])
       control.destroy();
     this._panelDisclosureControls = [];
+    
+    // DIAGNOSTIC: Log all discovered collapse buttons and their targets
+    const allButtons = document.querySelectorAll('.panel-collapse-btn[data-collapse-target]');
+    console.log('[PanelChrome] Discovered collapse buttons:', allButtons.length);
+    allButtons.forEach(btn => {
+      console.log(`  [PanelChrome] button target="${btn.dataset.collapseTarget}", panel exists:`, !!document.getElementById(btn.dataset.collapseTarget));
+    });
+    
     const targets = new Map();
     document
       .querySelectorAll('.panel-collapse-btn[data-collapse-target]')
@@ -104,7 +114,20 @@ export class PanelChrome {
       });
     for (const [targetId, buttons] of targets) {
       const panel = document.getElementById(targetId);
-      if (!panel) continue;
+      if (!panel) {
+        console.warn(`[PanelChrome] Collapse target "${targetId}" has buttons but panel element not found!`);
+        continue;
+      }
+      // DIAGNOSTIC: Log binding for newly added panels
+      if (targetId === 'case-management-panel' || targetId === 'annotation-metadata-panel') {
+        console.log(`[PanelChrome] Binding disclosure for ${targetId}:`, {
+          panelExists: Boolean(panel),
+          panelClassName: panel.className,
+          buttonsCount: buttons.length,
+          buttonTargets: buttons.map(b => b.dataset.collapseTarget),
+          hasCollapseBtn: Boolean(panel.querySelector('.panel-collapse-btn')),
+        });
+      }
       this._panelDisclosureControls.push(
         bindPanelDisclosure({
           panel,
@@ -114,6 +137,7 @@ export class PanelChrome {
           onEscape: (event) => this._collapsePanelOnEscape(event, targetId),
         }),
       );
+      console.log(`[PanelChrome] Registered disclosure for panel "${targetId}", total registered:`, this._panelDisclosureControls.length);
       this._restorePanelCollapsedState(targetId, {
         allowStored: !this._initialShareState,
       });
@@ -282,6 +306,7 @@ export class PanelChrome {
       'pp-toggles',
       'cctv-panel',
       'global-context-panel',
+      'annotation-metadata-panel',
     ].includes(panelEl?.id);
     const collapsed = panelEl.classList.contains('collapsed');
     panelEl
@@ -555,6 +580,10 @@ export class PanelChrome {
       });
     }
   }
+  refresh() {
+    this._initPanelChrome();
+  }
+
   destroy() {
     if (this._disposed) return;
     this._disposed = true;

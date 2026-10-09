@@ -14,7 +14,8 @@
 #left-panel-stack > #data-panel,
 #left-panel-stack > #cctv-panel,
 #left-panel-stack > #global-context-panel,
-#left-panel-stack > #scene-panel {
+#left-panel-stack > #scene-panel,
+#left-panel-stack > #case-management-panel {
   position: relative;
   top: auto;
   right: auto;
@@ -37,6 +38,10 @@
 
 #left-panel-stack > #scene-panel {
   order: 4;
+}
+
+#left-panel-stack > #case-management-panel {
+  order: 3;
 }
 
 /*
@@ -71,7 +76,8 @@
 
 #left-panel-stack > #data-panel:not(.collapsed) .data-panel-inner,
 #left-panel-stack > #cctv-panel:not(.collapsed) .cctv-panel-inner,
-#left-panel-stack > #scene-panel:not(.collapsed) .scene-panel-inner {
+#left-panel-stack > #scene-panel:not(.collapsed) .scene-panel-inner,
+#left-panel-stack > #case-management-panel:not(.collapsed) .case-management-panel-inner {
   height: 100%;
   max-height: 100%;
 }
@@ -81,7 +87,8 @@
 }
 
 #left-panel-stack > #cctv-panel:not(.collapsed) .cctv-panel-inner,
-#left-panel-stack > #scene-panel:not(.collapsed) .scene-panel-inner {
+#left-panel-stack > #scene-panel:not(.collapsed) .scene-panel-inner,
+#left-panel-stack > #case-management-panel:not(.collapsed) .case-management-panel-inner {
   overflow-y: auto;
   scrollbar-gutter: stable;
 }
@@ -124,6 +131,86 @@
   filter: blur(16px);
   opacity: 0.25;
   pointer-events: none;
+}
+
+#case-management-panel .panel-glow {
+  position: absolute;
+  inset: -18px;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(0, 212, 255, 0.16) 0%,
+    transparent 65%
+  );
+  filter: blur(16px);
+  opacity: 0.25;
+  pointer-events: none;
+}
+
+.case-management-panel-inner {
+  position: relative;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--panel-radius);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 24px);
+  backdrop-filter: blur(24px) saturate(1.4);
+  -webkit-backdrop-filter: blur(24px) saturate(1.4);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.03) inset,
+    0 1px 0 rgba(255, 255, 255, 0.06) inset;
+}
+
+.case-list-container {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.case-item {
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.case-item:hover {
+  background: rgba(0, 212, 255, 0.08);
+  color: var(--text-primary);
+}
+
+.case-item.active {
+  background: rgba(0, 212, 255, 0.15);
+  color: #e3faff;
+}
+
+.case-actions {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(0, 212, 255, 0.15);
+}
+
+.case-btn {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 212, 255, 0.22);
+  background: rgba(42, 113, 171, 0.12);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.case-btn:hover {
+  background: rgba(42, 113, 171, 0.24);
+  border-color: rgba(0, 212, 255, 0.35);
 }
 
 .scene-panel-inner {
@@ -402,6 +489,7 @@
 #cctv-panel.collapsed #cctv-meta,
 #cctv-panel.collapsed .cctv-summary-label,
 #cctv-panel.collapsed #cctv-summary,
+#case-management-panel.collapsed .panel-content,
 #scene-panel.collapsed .scene-controls,
 #scene-panel.collapsed .scene-shot-list,
 #scene-panel.collapsed .scene-progress,
@@ -415,7 +503,8 @@
 
 #data-panel.collapsed,
 #cctv-panel.collapsed,
-#scene-panel.collapsed {
+#scene-panel.collapsed,
+#case-management-panel.collapsed {
   width: var(--left-collapsed-width);
 }
 
@@ -425,6 +514,7 @@
 
 #data-panel.collapsed .panel-title,
 #cctv-panel.collapsed .panel-title,
+#case-management-panel.collapsed .panel-title,
 #radio-panel.collapsed .panel-title,
 #scene-panel.collapsed .panel-title {
   font-size: 8px;
@@ -434,6 +524,7 @@
 #control-panel.collapsed .panel-inner,
 #data-panel.collapsed .data-panel-inner,
 #cctv-panel.collapsed .cctv-panel-inner,
+#case-management-panel.collapsed .case-management-panel-inner,
 #radio-panel.collapsed .radio-panel-inner,
 #scene-panel.collapsed .scene-panel-inner,
 #param-slider-panel.collapsed,
@@ -444,6 +535,7 @@
 #control-panel.collapsed .panel-header,
 #data-panel.collapsed .panel-header,
 #cctv-panel.collapsed .panel-header,
+#case-management-panel.collapsed .panel-header,
 #radio-panel.collapsed .panel-header,
 #global-context-panel.collapsed .panel-header,
 #scene-panel.collapsed .panel-header,

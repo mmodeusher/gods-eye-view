@@ -12,11 +12,13 @@ export class AnnotationMetadataPanel {
    * @param {import('../../investigation/caseManager.js').CaseManager} options.caseManager
    * @param {function} options.onMetadataChanged
    */
-  constructor({ annotationEngine, annotationPersistence, caseManager, onMetadataChanged }) {
-    this.annotationEngine = annotationEngine;
-    this.annotationPersistence = annotationPersistence;
-    this.caseManager = caseManager;
-    this.onMetadataChanged = onMetadataChanged;
+  constructor(options) {
+    const opts = options || {};
+    this.annotationEngine = opts.annotationEngine;
+    this.annotationPersistence = opts.annotationPersistence;
+    this.caseManager = opts.caseManager;
+    this.onMetadataChanged = opts.onMetadataChanged;
+    this._chrome = opts.panelChrome || null;
     this._lifetime = new UiLifetime();
     this._container = null;
     this._form = null;
@@ -28,23 +30,33 @@ export class AnnotationMetadataPanel {
   _createElements() {
     this._panel = document.createElement('div');
     this._panel.id = 'annotation-metadata-panel';
-    this._panel.className = 'panel collapsed';
-    this._panel.dataset.panelId = 'annotation-metadata-panel';
+    this._panel.className = 'panel-collapsible collapsed';
+    this._panel.setAttribute('data-panel-id', 'annotation-metadata-panel');
 
-    const header = document.createElement('header');
+    // Glow layer for proper z-index and visual consistency
+    const glow = document.createElement('div');
+    glow.className = 'panel-glow';
+
+    // Inner container holds header + content together (matching right rail pattern)
+    const inner = document.createElement('div');
+    inner.className = 'annotation-metadata-panel-inner';
+
+    // Header inside inner container — must be inside for proper scrolling behavior
+    const header = document.createElement('div');
     header.className = 'panel-header';
     const title = document.createElement('span');
     title.className = 'panel-title';
-    title.textContent = 'Annotation Details';
+    title.textContent = 'DETAILS';
+    const divider = document.createElement('span');
+    divider.className = 'panel-divider';
     const collapseBtn = document.createElement('button');
     collapseBtn.className = 'panel-collapse-btn';
     collapseBtn.dataset.collapseTarget = 'annotation-metadata-panel';
     collapseBtn.textContent = '+';
     collapseBtn.setAttribute('aria-expanded', 'false');
-    collapseBtn.setAttribute('aria-label', 'Expand Annotation Details');
+    collapseBtn.setAttribute('aria-label', 'Collapse Annotation Details');
 
-    header.append(title, collapseBtn);
-    this._panel.appendChild(header);
+    header.append(title, divider, collapseBtn);
 
     const content = document.createElement('div');
     content.className = 'panel-content';
@@ -62,21 +74,18 @@ export class AnnotationMetadataPanel {
     const kvContainer = document.createElement('div');
     kvContainer.id = 'metadata-kv-container';
     kvContainer.className = 'metadata-kv-container';
-    kvContainer.style.marginTop = '16px';
-    kvContainer.style.borderTop = '1px solid #397080';
-    kvContainer.style.paddingTop = '12px';
 
     const addKvBtn = document.createElement('button');
     addKvBtn.type = 'button';
     addKvBtn.textContent = '+ Add Metadata Field';
     addKvBtn.className = 'metadata-kv-add-btn';
-    addKvBtn.style.width = '100%';
-    addKvBtn.style.padding = '4px';
-    addKvBtn.style.cursor = 'pointer';
-    addKvBtn.addEventListener('click', () => this._addKvRow());
 
     content.append(this._form, kvContainer, addKvBtn);
-    this._panel.appendChild(content);
+
+    inner.appendChild(header);
+    inner.appendChild(content);
+    this._panel.appendChild(glow);
+    this._panel.appendChild(inner);
 
     this._kvContainer = kvContainer;
     this._collapseBtn = collapseBtn;
@@ -148,8 +157,28 @@ export class AnnotationMetadataPanel {
   }
 
   mount(container) {
-    this._container = container;
-    this._container.appendChild(this._panel);
+      this._container = container;
+      this._container.appendChild(this._panel);
+      
+      // DIAGNOSTIC: Verify data-panel-id attribute exists for PanelChrome binding
+      console.log('[AnnotationMetadataPanel] Mounted panel:', {
+        id: this._panel.id,
+        hasDataPanelIdAttr: this._panel.hasAttribute('data-panel-id'),
+        datasetPanelId: this._panel.dataset.panelId,
+        collapseBtnTarget: this._collapseBtn?.dataset.collapseTarget,
+        buttonsFound: document.querySelectorAll('.panel-collapse-btn[data-collapse-target="annotation-metadata-panel"]').length,
+        chromeAvailable: Boolean(this._chrome),
+        panelClassName: this._panel.className,
+        innerClassExists: Boolean(this._panel.querySelector('.annotation-metadata-panel-inner')),
+      });
+      
+      // Trigger PanelChrome to discover the new collapse button
+      this._chrome?.refresh();
+    }
+
+  _refreshTogglePanel() {
+    this._collapseBtn.textContent = this._panel.classList.contains('collapsed') ? '+' : '−';
+    this._collapseBtn.setAttribute('aria-expanded', String(!this._panel.classList.contains('collapsed')));
   }
 
   setAnnotation(annotation) {

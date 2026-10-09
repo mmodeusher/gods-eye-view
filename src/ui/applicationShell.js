@@ -107,6 +107,7 @@ export class StyleManager extends ShellFacade {
       readScrollRestoreOwner: () => this._displayPortalScrollRestoreOwner,
       readDisplayScrollTop: () => this._standardDisplayScrollTop,
     });
+    this.panelChrome = this._panelChrome;
     this._feedback = new ShellFeedback({
       readLayers: () => this._dataManager?.getAll?.() || [],
     });
