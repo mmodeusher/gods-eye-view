@@ -9,15 +9,18 @@ export class CaseManagementPresentation {
    * @param {function} [options.onCaseSelected]
    * @param {function} [options.requestRender]
    * @param {import('./panelChrome.js').PanelChrome} [options.panelChrome]
+   * @param {import('../../investigation/osintService.js').OSINTService} [options.osintService]
    */
   constructor(manager, {
     requestRender = governorRequestRender,
     onCaseSelected,
     panelChrome,
+    osintService,
   } = {}) {
     this.manager = manager;
     this.onCaseSelected = onCaseSelected;
     this.requestRender = requestRender;
+    this.osintService = osintService || null;
     this._panel = null;
     this._chrome = panelChrome || null;
     this._unsubscribe = manager.subscribe((state) => {
@@ -32,6 +35,7 @@ export class CaseManagementPresentation {
         caseManager: this.manager,
         onCaseSelected: this.onCaseSelected,
         panelChrome: this._chrome,
+        osintService: this.osintService,
       });
     }
     return this._panel;

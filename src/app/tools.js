@@ -14,6 +14,7 @@ import {
 } from '../renderGovernor.js';
 import { CaseManager } from '../investigation/caseManager.js';
 import { AnnotationPersistence } from '../investigation/annotationPersistence.js';
+import { createDefaultOSINTService } from '../investigation/osintService.js';
 
 /** Attach scene tools, rendering listeners and the application debug handle. */
 export function createApplicationTools({
@@ -107,12 +108,18 @@ export function createApplicationTools({
     // OSINT Investigation Layer
     const caseManager = new CaseManager();
     const annotationPersistence = new AnnotationPersistence(caseManager);
+    const osintService = createDefaultOSINTService({
+      caseManager,
+      annotationPersistence,
+    });
 
     const caseManagementPresentation = new CaseManagementPresentation(caseManager, {
       onCaseSelected: (c) => {
-        console.log('Case selected:', c);
+        caseManager.setActiveCase(c.id);
+        console.log('Case selected and activated:', c.id, c.name);
       },
       panelChrome: styleManager.panelChrome,
+      osintService,
     });
     defer(() => caseManagementPresentation.destroy());
 
@@ -132,6 +139,7 @@ export function createApplicationTools({
         console.log('Metadata changed for annotation:', annotationId, extension);
       },
       panelChrome: styleManager.panelChrome,
+      osintService,
     });
     const rightRail = document.getElementById('right-context-rail');
     if (rightRail) {
@@ -155,6 +163,7 @@ export function createApplicationTools({
       caseManager,
       annotationPersistence,
       annotationMetadataPanel,
+      osintService,
     };
     const debug = window.__godsEyeView;
     defer(() => {

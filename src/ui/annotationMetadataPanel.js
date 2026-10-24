@@ -11,6 +11,7 @@ export class AnnotationMetadataPanel {
    * @param {import('../../investigation/annotationPersistence.js').AnnotationPersistence} options.annotationPersistence
    * @param {import('../../investigation/caseManager.js').CaseManager} options.caseManager
    * @param {function} options.onMetadataChanged
+   * @param {import('../../investigation/osintService.js').OSINTService} [options.osintService]
    */
   constructor(options) {
     const opts = options || {};
@@ -18,11 +19,13 @@ export class AnnotationMetadataPanel {
     this.annotationPersistence = opts.annotationPersistence;
     this.caseManager = opts.caseManager;
     this.onMetadataChanged = opts.onMetadataChanged;
+    this.osintService = opts.osintService || null;
     this._chrome = opts.panelChrome || null;
     this._lifetime = new UiLifetime();
     this._container = null;
     this._form = null;
     this._currentAnnotationId = null;
+    this._currentPhoneOSINT = null;
 
     this._createElements();
   }
@@ -82,13 +85,152 @@ export class AnnotationMetadataPanel {
 
     content.append(this._form, kvContainer, addKvBtn);
 
+    // OSINT results section (phone number lookup results)
+    const osintSection = this._createOSINTResultsSection();
+
     inner.appendChild(header);
     inner.appendChild(content);
     this._panel.appendChild(glow);
     this._panel.appendChild(inner);
 
     this._kvContainer = kvContainer;
+    this._osintResultsContainer = osintSection;
     this._collapseBtn = collapseBtn;
+  }
+
+  /**
+   * Create the OSINT results display section
+   * @returns {HTMLElement}
+   * @private
+   */
+  _createOSINTResultsSection() {
+    const section = document.createElement('div');
+    section.className = 'osint-results-section';
+    section.style.marginTop = '12px';
+    section.style.borderTop = '1px solid #397080';
+    section.style.paddingTop = '8px';
+
+    // Section header
+    const header = document.createElement('div');
+    header.className = 'osint-results-header';
+    header.style.display = 'flex';
+    header.style.alignItems = 'center';
+    header.style.gap = '6px';
+    header.style.marginBottom = '8px';
+
+    const icon = document.createElement('span');
+    icon.className = 'osint-icon';
+    icon.textContent = '\uD83D\uDD0D';
+    icon.style.fontSize = '14px';
+
+    const title = document.createElement('span');
+    title.className = 'osint-results-title';
+    title.textContent = 'OSINT Results';
+    title.style.fontSize = '12px';
+    title.style.fontWeight = '600';
+    title.style.color = '#e3faff';
+    title.style.letterSpacing = '0.5px';
+
+    header.append(icon, title);
+
+    // Results container
+    const resultsContainer = document.createElement('div');
+    resultsContainer.className = 'osint-results-container';
+    resultsContainer.style.fontSize = '11px';
+    resultsContainer.style.color = '#8ab4c0';
+    resultsContainer.style.lineHeight = '1.5';
+
+    section.append(header, resultsContainer);
+
+    this._osintResultsContainer = resultsContainer;
+
+    return section;
+  }
+
+  /**
+   * Set OSINT phone lookup results for display
+   * @param {import('../../investigation/osintService.js').PhoneOSINTResult|null} osintData
+   */
+  setOSINTResults(osintData) {
+    this._currentPhoneOSINT = osintData;
+    
+    if (!this._osintResultsContainer) return;
+
+    if (!osintData || !osintData.success) {
+      this._osintResultsContainer.innerHTML = '<div style="color: #668899; font-style: italic;">No OSINT data available</div>';
+      return;
+    }
+
+    let html = '';
+
+    // Phone number display
+    if (osintData.parsed) {
+      html += `<div class="osint-phone-number" style="color: #4ade80; font-weight: 600; margin-bottom: 6px;">`;
+      html += `📞 ${osintData.parsed.national || osintData.parsed.e164 || osintData.phoneNumber}`;
+      html += `</div>`;
+
+      // Type badge
+      if (osintData.parsed.type === 'toll-free') {
+        html += `<div class="osint-type-badge" style="display: inline-block; padding: 2px 6px; background: #1a3a4a; border: 1px solid #397080; border-radius: 3px; font-size: 10px; color: #fbbf24; margin-bottom: 6px;">TOLL-FREE</div>`;
+      } else if (osintData.parsed.type === 'premium') {
+        html += `<div class="osint-type-badge" style="display: inline-block; padding: 2px 6px; background: #1a3a4a; border: 1px solid #397080; border-radius: 3px; font-size: 10px; color: #ef4444; margin-bottom: 6px;">PREMIUM RATE</div>`;
+      }
+    }
+
+    // Geolocation data
+    if (osintData.geolocation) {
+      const geo = osintData.geolocation;
+      html += `<div class="osint-geolocation" style="margin-top: 6px;">`;
+      html += `<div class="osint-geo-row" style="display: flex; gap: 4px; margin-bottom: 3px;">`;
+      html += `<span style="color: #668899;">Area Code:</span> <span style="color: #e3faff;">${geo.areaCode}</span>`;
+      html += `</div>`;
+      html += `<div class="osint-geo-row" style="display: flex; gap: 4px; margin-bottom: 3px;">`;
+      html += `<span style="color: #668899;">Location:</span> <span style="color: #e3faff;">${geo.city}, ${geo.state}</span>`;
+      html += `</div>`;
+      
+      if (geo.latitude && geo.longitude) {
+        html += `<div class="osint-geo-row" style="display: flex; gap: 4px; margin-bottom: 3px;">`;
+        html += `<span style="color: #668899;">Coordinates:</span> <span style="color: #e3faff;">${geo.latitude.toFixed(4)}, ${geo.longitude.toFixed(4)}</span>`;
+        html += `</div>`;
+      }
+
+      if (geo.counties && geo.counties.length > 0) {
+        html += `<div class="osint-geo-row" style="display: flex; gap: 4px; margin-bottom: 3px;">`;
+        html += `<span style="color: #668899;">Counties:</span> <span style="color: #e3faff;">${geo.counties.slice(0, 3).join(', ')}</span>`;
+        html += `</div>`;
+      }
+
+      if (geo.timezones && geo.timezones.length > 0) {
+        const tz = geo.primaryTimezone || geo.timezones[0];
+        html += `<div class="osint-geo-row" style="display: flex; gap: 4px;">`;
+        html += `<span style="color: #668899;">Timezone:</span> <span style="color: #e3faff;">${tz?.abbreviation || 'N/A'} (${tz?.name || 'Unknown'})</span>`;
+        html += `</div>`;
+      }
+
+      html += `</div>`;
+    }
+
+    // Carrier info
+    if (osintData.carrier) {
+      html += `<div class="osint-carrier" style="margin-top: 6px; padding-top: 6px; border-top: 1px solid #2a4a5a;">`;
+      html += `<div class="osint-carrier-row" style="display: flex; gap: 4px; margin-bottom: 3px;">`;
+      html += `<span style="color: #668899;">Type:</span> <span style="color: #e3faff; text-transform: capitalize;">${osintData.carrier.type}</span>`;
+      html += `</div>`;
+      if (osintData.carrier.note) {
+        html += `<div class="osint-carrier-note" style="font-size: 10px; color: #668899; font-style: italic;">${osintData.carrier.note}</div>`;
+      }
+      html += `</div>`;
+    }
+
+    // Timestamp
+    if (osintData.timestamp) {
+      const lookupTime = new Date(osintData.timestamp);
+      html += `<div class="osint-timestamp" style="margin-top: 6px; padding-top: 6px; border-top: 1px solid #2a4a5a; font-size: 10px; color: #668899;">`;
+      html += `Lookup: ${lookupTime.toLocaleString()}`;
+      html += `</div>`;
+    }
+
+    this._osintResultsContainer.innerHTML = html;
   }
 
   _createField(name, labelText, type) {
@@ -198,6 +340,22 @@ export class AnnotationMetadataPanel {
       for (const [k, v] of Object.entries(ext.metadata)) {
         this._addKvRow(k, String(v));
       }
+    }
+
+    // Check for OSINT phone data in annotation metadata
+    if (ext.metadata?.type === 'phone_osint') {
+      this.setOSINTResults({
+        success: true,
+        phoneNumber: ext.metadata.phoneNumber,
+        parsed: ext.metadata.parsed,
+        geolocation: ext.metadata.geolocation,
+        carrier: ext.metadata.carrier,
+        tollFree: ext.metadata.tollFree || false,
+        premiumRate: ext.metadata.premiumRate || false,
+        timestamp: ext.metadata.timestamp
+      });
+    } else {
+      this.setOSINTResults(null);
     }
   }
 
