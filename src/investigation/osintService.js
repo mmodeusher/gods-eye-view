@@ -99,7 +99,7 @@ export class OSINTService {
   }
 
   /**
-    * Save phone OSINT results to a case as annotation metadata
+   * Save phone OSINT results to a case as annotation metadata
     * @param {string} caseId - Case ID
     * @param {string} phoneNumber - Phone number that was looked up
     * @param {Object} osintResult - OSINT lookup result
@@ -129,14 +129,15 @@ export class OSINTService {
       };
 
       // Persist the annotation
-      await this.annotationPersistence.persist(annotationId, extension);
-      
-      // Add to case if case manager available
-      if (this.caseManager) {
-        const activeCaseId = this.caseManager.getActiveCaseId();
-        if (activeCaseId === caseId) {
-          // Case is active, no need to add annotation
+      if (this.annotationPersistence) {
+        await this.annotationPersistence.persist(annotationId, extension);
+        
+        // Add to case if case manager available
+        if (this.caseManager) {
+          this.caseManager.addAnnotationToCase(caseId, annotationId);
         }
+      } else {
+        console.warn('[OSINTService] annotationPersistence not available, skipping annotation save');
       }
 
     } catch (error) {
@@ -302,6 +303,74 @@ export class OSINTService {
   }
 
   /**
+   * Enhanced phone number correlation with case data
+   * @param {string} phoneNumber - Phone number to correlate
+   * @param {string} caseId - Case ID for correlation
+   * @returns {Promise<PhoneCorrelationResult>}
+   */
+  async correlatePhoneWithCase(phoneNumber, caseId) {
+    // This would integrate with the phone module's enhanced correlation function
+    // For now, returning basic implementation
+    const result = await this.lookupPhoneNumber(phoneNumber, { caseId });
+    
+    if (result.success && result.parsed.isValid) {
+      // Get carrier info
+      const carrierInfo = await getCarrierInfo(phoneNumber);
+      result.carrier = carrierInfo;
+      
+      // Find matches in case
+      const matches = await findPhoneMatchesInCase(phoneNumber, caseId);
+      result.annotationMatches = matches;
+    }
+    
+    return result;
+  }
+
+  /**
+   * Enhanced phone number correlation with ML enhancements
+   * @param {string} phoneNumber - Phone number to correlate
+   * @param {string} caseId - Case ID for correlation
+   * @returns {Promise<Object>} Enhanced correlation result
+   */
+  async enhancedCorrelatePhoneWithCase(phoneNumber, caseId) {
+    // ML module not implemented in this version - fallback to basic correlation
+    console.warn('[OSINTService] ML enhancement not available in this build');
+    return await this.correlatePhoneWithCase(phoneNumber, caseId);
+  }
+  
+  /**
+   * Get all annotations for a case (including phone OSINT)
+   * @param {string} caseId - Case ID to query
+   * @returns {Promise<Object[]>} Array of annotation data
+   */
+  async getAnnotationsForCase(caseId) {
+    if (!this.annotationPersistence) {
+      console.warn('[OSINTService] Annotation persistence not available');
+      return [];
+    }
+    
+    try {
+      // Get all annotations from storage
+      const allAnnotations = this.annotationPersistence.getAll();
+      const caseAnnotations = [];
+      
+      for (const [annotationId, extension] of allAnnotations.entries()) {
+        if (extension.caseId === caseId) {
+          caseAnnotations.push({
+            annotationId,
+            ...extension
+          });
+        }
+      }
+      
+      return caseAnnotations;
+    } catch (error) {
+      console.error('[OSINTService] Failed to get annotations for case:', error);
+      return [];
+    }
+  }
+
+  /**
    * Get lookup statistics
    * @returns {Object} Lookup stats
    */
@@ -311,6 +380,38 @@ export class OSINTService {
       cacheSize: this.cache.size(),
       cacheStats: this.cache.stats()
     };
+  }
+  
+  /**
+   * Get all phone OSINT annotations for a case
+   * @param {string} caseId - Case ID to query
+   * @returns {Promise<Object[]>} Array of phone OSINT annotation data
+   */
+  async getPhoneOSINTForCase(caseId) {
+    if (!this.annotationPersistence) {
+      console.warn('[OSINTService] Annotation persistence not available');
+      return [];
+    }
+    
+    try {
+      // Get all annotations from storage
+      const allAnnotations = this.annotationPersistence.getAll();
+      const phoneAnnotations = [];
+      
+      for (const [annotationId, extension] of allAnnotations.entries()) {
+        if (extension.caseId === caseId && extension.metadata?.type === 'phone_osint') {
+          phoneAnnotations.push({
+            annotationId,
+            ...extension
+          });
+        }
+      }
+      
+      return phoneAnnotations;
+    } catch (error) {
+      console.error('[OSINTService] Failed to get phone OSINT for case:', error);
+      return [];
+    }
   }
 
   /**

@@ -514,6 +514,14 @@ export function getPhoneNumberLocalTime(phoneNumber, date = new Date()) {
 export async function findPhoneMatchesInCase(phoneNumber, caseId) {
   // This would be implemented by integrating with the case management system
   // For now, returning empty array as placeholder
+  // In a real implementation, this would:
+  // 1. Query the case's annotations
+  // 2. Search for phone numbers in annotation metadata
+  // 3. Return matches with confidence levels and context
+  
+  console.log(`[findPhoneMatchesInCase] Searching for phone ${phoneNumber} in case ${caseId}`);
+  
+  // Placeholder implementation - would integrate with actual case management system
   return [];
 }
 
@@ -537,6 +545,39 @@ export async function getCarrierInfo(phoneNumber) {
   return {
     type: parsed.carrierType || 'unknown',
     note: 'Estimated based on numbering patterns. Accurate carrier info requires API lookup.'
+  };
+}
+
+/**
+ * Enhanced phone number correlation with case data
+ * @param {string} phoneNumber - Phone number to correlate
+ * @param {string} caseId - Case ID for correlation
+ * @returns {Promise<PhoneCorrelationResult>}
+ */
+export async function correlatePhoneWithCase(phoneNumber, caseId) {
+  // Get the basic phone OSINT data
+  const osintData = resolvePhoneOSINT(phoneNumber, { caseId });
+  
+  if (!osintData.parsed.isValid) {
+    return osintData;
+  }
+  
+  // Find matching annotations in the case
+  const matches = await findPhoneMatchesInCase(phoneNumber, caseId);
+  
+  // Get carrier information
+  const carrierInfo = await getCarrierInfo(phoneNumber);
+  
+  // Add correlation data to result
+  return {
+    ...osintData,
+    carrier: carrierInfo,
+    annotationMatches: matches,
+    correlation: {
+      caseId,
+      status: 'resolved',
+      timestamp: new Date().toISOString()
+    }
   };
 }
 

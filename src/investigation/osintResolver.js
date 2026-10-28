@@ -44,6 +44,7 @@ export class OSINTResolver {
    */
   _registerHandlers() {
     this._handlers.set('phone', this._resolvePhone.bind(this));
+    this._handlers.set('phone-correlation', this._resolvePhoneCorrelation.bind(this));
     this._handlers.set('geolocation', this._resolveGeolocation.bind(this));
     this._handlers.set('identity', this._resolveIdentity.bind(this));
     this._handlers.set('cctv', this._resolveCCTV.bind(this));
@@ -166,6 +167,20 @@ export class OSINTResolver {
       premiumRate: osintData.premiumRate || false,
       timestamp: osintData.timestamp
     };
+  }
+
+  /**
+   * Resolve enhanced phone correlation with case data
+   * @param {Object} params - Lookup parameters
+   * @returns {Promise<OSINTLookupResult>}
+   * @private
+   */
+  _resolvePhoneCorrelation(params) {
+    const phoneNumber = params.value;
+    const context = params.context || {};
+    
+    // This would be a more complex resolution that includes case correlation
+    return this._resolvePhone(params);
   }
 
   /**

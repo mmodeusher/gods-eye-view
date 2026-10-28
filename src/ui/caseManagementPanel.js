@@ -278,6 +278,9 @@ export class CaseManagementPanel {
         // Emit event for DETAILS panel to refresh OSINT data
         window.dispatchEvent(new CustomEvent('osint:phone-lookup-complete', { detail: result }));
         console.log('[CaseManagementPanel] Dispatched osint:phone-lookup-complete event');
+        
+        // Also dispatch case update event to refresh case list
+        window.dispatchEvent(new CustomEvent('case:updated'));
       } else {
         console.error('[CaseManagementPanel] Lookup failed:', result.error);
         this._phoneStatus.textContent = `Lookup failed: ${result.error || 'Unknown error'}`;
@@ -329,7 +332,12 @@ export class CaseManagementPanel {
       if (c.id === activeCaseId) {
         item.style.backgroundColor = '#397080';
       }
-      item.addEventListener('click', () => this.onCaseSelected(c));
+      // Add click handler to show case details
+      item.addEventListener('click', () => {
+        this.onCaseSelected(c);
+        // Dispatch event to show case details panel
+        window.dispatchEvent(new CustomEvent('case:selected', { detail: c }));
+      });
       this._listContainer.appendChild(item);
     }
   }

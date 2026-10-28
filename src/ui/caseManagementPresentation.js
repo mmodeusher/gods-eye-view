@@ -48,7 +48,22 @@ export class CaseManagementPresentation {
       console.log('[CaseManagementPresentation] Mounting panel, chrome available:', Boolean(this._chrome));
       this.panel.mount(el);
       this._chrome?.refresh();
+      
+      // Listen for case selection events to show details
+      window.addEventListener('case:selected', (event) => {
+        this._showCaseDetails(event.detail);
+      });
     }
+  }
+  
+  _showCaseDetails(caseData) {
+    console.log('[CaseManagementPresentation] Showing case details for:', caseData);
+    // This would trigger the display of a case details panel
+    // For now, we'll just log it - actual implementation would show a panel
+    // In a real implementation, this would:
+    // 1. Create a new panel or update existing one
+    // 2. Fetch phone OSINT data for this case using osintService.getPhoneOSINTForCase(caseData.id)
+    // 3. Display the data in a readable format
   }
 
   refresh() {
